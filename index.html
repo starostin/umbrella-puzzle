@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcium Umbrella Puzzle</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a2e; /* Dark background */
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            /* overflow: hidden; */ /* Removing this to allow scrolling on smaller screens */
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #2a2a4a; /* Slightly lighter background for the game area */
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border: 2px solid #6a0dad; /* Purple border */
+            max-width: 90vw; /* Responsive width */
+            box-sizing: border-box;
+            max-height: 95vh; /* Ensure the container fits on the screen */
+            overflow-y: auto; /* Add a scrollbar if the content is too tall */
+        }
+
+        h1 {
+            color: #a020f0; /* Arcium purple */
+            margin-bottom: 15px;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #a020f0, 0 0 20px #a020f0;
+        }
+
+        #difficultySelection {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 10px 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .moves-display, .time-display {
+            background-color: #3a3a5a;
+            padding: 8px 15px;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+            margin: 5px;
+            white-space: nowrap;
+        }
+
+        canvas {
+            background-color: #1a1a2e;
+            display: block;
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+            border: 1px solid #a020f0; /* Subtle border */
+            cursor: grab;
+            max-width: 100%; /* Make canvas responsive */
+            height: auto; /* Maintain aspect ratio */
+        }
+
+        canvas.grabbing {
+            cursor: grabbing;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #e0e0e0;
+            background-image: linear-gradient(to right, #6a0dad, #a020f0); /* Purple gradient */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+            background-image: linear-gradient(to right, #a020f0, #6a0dad);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .difficulty-btn.active {
+            background-image: linear-gradient(to right, #a020f0, #c040ff); /* Brighter purple */
+            box-shadow: 0 0 15px #a020f0, inset 0 2px 5px rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            border: 1px solid #e0e0e0;
+        }
+
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(42, 42, 74, 0.95); /* Semi-transparent */
+            border: 2px solid #a020f0;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: none; /* Hidden by default */
+            max-width: 80vw;
+            box-sizing: border-box;
+        }
+
+        .message-box h2 {
+            color: #a020f0;
+            margin-top: 0;
+            font-size: 2em;
+        }
+
+        .message-box p {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .message-box button {
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            .game-info {
+                font-size: 1em;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Arcium Umbrella Puzzle</h1>
+        <div id="difficultySelection">
+            <button class="difficulty-btn" data-size="4">Easy (4x4)</button>
+            <button class="difficulty-btn" data-size="6">Medium (6x6)</button>
+            <button class="difficulty-btn" data-size="8">Hard (8x8)</button>
+        </div>
+        <div class="game-info">
+            <div class="moves-display">Moves: <span id="moves">0</span></div>
+            <div class="time-display">Time: <span id="time">0</span>s</div>
+        </div>
+        <canvas id="puzzleCanvas"></canvas>
+        <div class="controls">
+            <button id="startButton">Start Game</button>
+            <button id="restartButton" style="display: none;">Restart Game</button>
+            <button id="solutionButton" style="display: none;">Show Solution</button>
+        </div>
+
+        <!-- Message Box -->
+        <div id="messageBox" class="message-box">
+            <h2 id="messageTitle">Welcome!</h2>
+            <p id="messageText"></p>
+            <button id="closeMessageButton">Got It!</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('puzzleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const movesDisplay = document.getElementById('moves');
+        const timeDisplay = document.getElementById('time');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const solutionButton = document.getElementById('solutionButton');
+        const difficultySelection = document.getElementById('difficultySelection');
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+        const messageBox = document.getElementById('messageBox');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const closeMessageButton = document.getElementById('closeMessageButton');
+
+        // Puzzle settings
+        let puzzleRows = 4;
+        let puzzleCols = 4;
+        const CANVAS_WIDTH = 400; // Fixed canvas width for puzzle image
+        const CANVAS_HEIGHT = 400; // Fixed canvas height for puzzle image
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // Game state
+        let pieces = [];
+        let draggingPiece = null;
+        let offsetX, offsetY; // Offset from mouse to piece top-left
+        let totalMoves = 0;
+        let gameTime = 0;
+        let gameInterval;
+        let gameOver = true;
+        let animationFrameId; // Declared globally for `cancelAnimationFrame`
+        const SNAP_DISTANCE = 20; // Pixels for snapping
+        let currentGridSize = 4; // To remember the current difficulty for restart
+        let selectedGridSize = 4; // To remember the selection before starting
+        let isSolutionVisible = false; // For toggling solution
+
+        // --- Drawing the Umbrella Image (Off-screen) ---
+        const umbrellaCanvas = document.createElement('canvas');
+        const umbrellaCtx = umbrellaCanvas.getContext('2d');
+        umbrellaCanvas.width = CANVAS_WIDTH;
+        umbrellaCanvas.height = CANVAS_HEIGHT;
+
+        /**
+         * Draws a stylized purple umbrella onto the off-screen canvas.
+         */
+        function drawUmbrellaImage() {
+            umbrellaCtx.clearRect(0, 0, umbrellaCanvas.width, umbrellaCanvas.height);
+
+            const centerX = umbrellaCanvas.width / 2;
+            const centerY = umbrellaCanvas.height / 2;
+            const radius = 100;
+            const handleLength = 120;
+            const handleWidth = 10;
+
+            // Umbrella canopy (purple gradient)
+            const gradient = umbrellaCtx.createLinearGradient(0, centerY - radius, 0, centerY + radius / 2);
+            gradient.addColorStop(0, '#A020F0'); // Arcium Purple
+            gradient.addColorStop(1, '#6A0DAD'); // Darker Purple
+            umbrellaCtx.fillStyle = gradient;
+
+            umbrellaCtx.beginPath();
+            // Top arc
+            umbrellaCtx.arc(centerX, centerY, radius, Math.PI, Math.PI * 2, false);
+            umbrellaCtx.lineTo(centerX + radius, centerY); // Close the top arc
+            umbrellaCtx.fill();
+
+            // Ripples/segments
+            umbrellaCtx.strokeStyle = 'rgba(255,255,255,0.3)';
+            umbrellaCtx.lineWidth = 2;
+            for (let i = 0; i < 5; i++) {
+                const angle1 = Math.PI + (i * (Math.PI / 4));
+                const angle2 = Math.PI + ((i + 1) * (Math.PI / 4));
+                umbrellaCtx.beginPath();
+                umbrellaCtx.moveTo(centerX, centerY);
+                umbrellaCtx.lineTo(centerX + radius * Math.cos(angle1), centerY + radius * Math.sin(angle1));
+                umbrellaCtx.lineTo(centerX + radius * Math.cos(angle2), centerY + radius * Math.sin(angle2));
+                umbrellaCtx.closePath();
+                umbrellaCtx.stroke();
+            }
+
+            // Umbrella handle
+            umbrellaCtx.fillStyle = '#8B4513'; // SaddleBrown
+            umbrellaCtx.fillRect(centerX - handleWidth / 2, centerY, handleWidth, handleLength);
+            umbrellaCtx.beginPath();
+            umbrellaCtx.arc(centerX, centerY + handleLength, handleWidth * 1.5, 0, Math.PI, false);
+            umbrellaCtx.fill();
+        }
+
+        // --- Game Initialization ---
+
+        /**
+         * Initializes the puzzle pieces.
+         */
+        function initializePuzzle() {
+            pieces = [];
+            totalMoves = 0;
+            gameTime = 0;
+            clearInterval(gameInterval); // Clear any running timer
+            movesDisplay.textContent = totalMoves;
+            timeDisplay.textContent = gameTime;
+
+            const pieceWidth = CANVAS_WIDTH / puzzleCols;
+            const pieceHeight = CANVAS_HEIGHT / puzzleRows;
+
+            // Generate integer-based boundaries to prevent floating point errors
+            // when checking image data on non-power-of-2 grids (like 6x6).
+            const colBoundaries = [0];
+            for (let i = 1; i <= puzzleCols; i++) {
+                colBoundaries.push(Math.round((i / puzzleCols) * CANVAS_WIDTH));
+            }
+            const rowBoundaries = [0];
+            for (let i = 1; i <= puzzleRows; i++) {
+                rowBoundaries.push(Math.round((i / puzzleRows) * CANVAS_HEIGHT));
+            }
+
+
+            // Create pieces with their original positions
+            for (let row = 0; row < puzzleRows; row++) {
+                for (let col = 0; col < puzzleCols; col++) {
+                    const originalX = col * pieceWidth;
+                    const originalY = row * pieceHeight;
+                    pieces.push({
+                        id: `piece-${row}-${col}`,
+                        originalX: originalX,
+                        originalY: originalY,
+                        x: 0, // Will be set to scrambled position
+                        y: 0, // Will be set to scrambled position
+                        width: pieceWidth,
+                        height: pieceHeight,
+                        isSolved: false,
+                        isUmbrellaPart: false // New property
+                    });
+                }
+            }
+
+            // Identify which pieces are part of the umbrella using the integer boundaries
+            let pieceIndex = 0;
+            for (let row = 0; row < puzzleRows; row++) {
+                for (let col = 0; col < puzzleCols; col++) {
+                    const piece = pieces[pieceIndex];
+                    const sx = colBoundaries[col];
+                    const sy = rowBoundaries[row];
+                    const sWidth = colBoundaries[col + 1] - sx;
+                    const sHeight = rowBoundaries[row + 1] - sy;
+
+                    try {
+                        const imageData = umbrellaCtx.getImageData(sx, sy, sWidth, sHeight);
+                        const data = imageData.data;
+                        let hasContent = false;
+                        for (let i = 3; i < data.length; i += 4) { // Check alpha channel
+                            if (data[i] > 128) { // Changed from 0 to ignore very faint lines
+                                hasContent = true;
+                                break;
+                            }
+                        }
+                        piece.isUmbrellaPart = hasContent;
+                    } catch (e) {
+                        console.error("Could not get image data for piece.", e);
+                        // As a fallback, assume all pieces are part of the puzzle if canvas is tainted
+                        piece.isUmbrellaPart = true;
+                    }
+                    pieceIndex++;
+                }
+            }
+            scramblePieces();
+            drawPuzzle();
+        }
+
+        /**
+         * Scrambles the pieces by assigning them random positions.
+         */
+        function scramblePieces() {
+            const availablePositions = [];
+            for (let i = 0; i < puzzleRows * puzzleCols; i++) {
+                // Spread pieces over the canvas area, but not right at the edges to avoid clipping
+                availablePositions.push({
+                    x: Math.random() * (CANVAS_WIDTH - pieces[0].width),
+                    y: Math.random() * (CANVAS_HEIGHT - pieces[0].height)
+                });
+            }
+            shuffleArray(availablePositions);
+
+            pieces.forEach((piece, index) => {
+                piece.x = availablePositions[index].x;
+                piece.y = availablePositions[index].y;
+                piece.isSolved = false; // Reset solved status
+            });
+        }
+
+        /**
+         * Shuffles an array in place (Fisher-Yates algorithm).
+         * @param {Array} array - The array to shuffle.
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // --- Drawing Functions ---
+
+        /**
+         * Draws all puzzle pieces on the canvas.
+         */
+        function drawPuzzle() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Draw a semi-transparent grid outline (target positions)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            const pieceWidth = CANVAS_WIDTH / puzzleCols;
+            const pieceHeight = CANVAS_HEIGHT / puzzleRows;
+            for (let row = 0; row <= puzzleRows; row++) {
+                ctx.beginPath();
+                ctx.moveTo(0, row * pieceHeight);
+                ctx.lineTo(CANVAS_WIDTH, row * pieceHeight);
+                ctx.stroke();
+            }
+            for (let col = 0; col <= puzzleCols; col++) {
+                ctx.beginPath();
+                ctx.moveTo(col * pieceWidth, 0);
+                ctx.lineTo(col * pieceWidth, CANVAS_HEIGHT);
+                ctx.stroke();
+            }
+
+
+            pieces.forEach(piece => {
+                // Draw piece background (optional, for debugging or visual flair)
+                // ctx.fillStyle = piece.isSolved ? '#32CD32' : 'rgba(74, 74, 106, 0.5)';
+                // ctx.fillRect(piece.x, piece.y, piece.width, piece.height);
+
+                // Draw the segment of the umbrella image
+                if (piece.isSolved) {
+                    ctx.drawImage(
+                        umbrellaCanvas,
+                        piece.originalX, piece.originalY, piece.width, piece.height, // Source rectangle
+                        piece.originalX, piece.originalY, piece.width, piece.height // Destination rectangle (draw at original pos)
+                    );
+                    // Add a solved border
+                    ctx.strokeStyle = '#32CD32'; // Green
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(piece.originalX, piece.originalY, piece.width, piece.height);
+                } else {
+                    ctx.drawImage(
+                        umbrellaCanvas,
+                        piece.originalX, piece.originalY, piece.width, piece.height, // Source rectangle
+                        piece.x, piece.y, piece.width, piece.height // Destination rectangle (draw at current pos)
+                    );
+                    // Add a default border for unsolved pieces
+                    ctx.strokeStyle = '#5b3e9b'; // Purple
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(piece.x, piece.y, piece.width, piece.height);
+                }
+
+                // If currently dragging this piece, draw it on top and highlight
+                if (draggingPiece && draggingPiece.id === piece.id) {
+                    ctx.strokeStyle = '#e0e0e0'; // White border for dragging
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(piece.x, piece.y, piece.width, piece.height);
+                }
+            });
+        }
+
+        // --- Game Logic ---
+
+        /**
+         * Starts the game timer.
+         */
+        function startTimer() {
+            gameTime = 0;
+            timeDisplay.textContent = gameTime;
+            gameInterval = setInterval(() => {
+                gameTime++;
+                timeDisplay.textContent = gameTime;
+            }, 1000);
+        }
+
+        /**
+         * Checks if a point is inside a rectangle.
+         * @param {number} x - Point X.
+         * @param {number} y - Point Y.
+         * @param {object} rect - Rectangle object {x, y, width, height}.
+         * @returns {boolean} True if point is inside rect.
+         */
+        function isPointInRect(x, y, rect) {
+            return x > rect.x && x < rect.x + rect.width && y > rect.y && y < rect.y + rect.height;
+        }
+
+        /**
+         * Handles mouse down event on the canvas.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function handleMouseDown(event) {
+            if (gameOver) return;
+
+            const rect = canvas.getBoundingClientRect();
+            // Scale mouse coordinates to match canvas resolution
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (event.clientX - rect.left) * scaleX;
+            const mouseY = (event.clientY - rect.top) * scaleY;
+
+            // Find the piece that was clicked (iterate in reverse to pick top-most if overlapped)
+            for (let i = pieces.length - 1; i >= 0; i--) {
+                const piece = pieces[i];
+                // Allow moving any piece, even if solved
+                if (isPointInRect(mouseX, mouseY, piece)) {
+                    draggingPiece = piece;
+                    offsetX = mouseX - piece.x;
+                    offsetY = mouseY - piece.y;
+                    canvas.classList.add('grabbing');
+                    // Bring the dragging piece to the top of the drawing order
+                    pieces.splice(i, 1);
+                    pieces.push(draggingPiece);
+                    drawPuzzle(); // Redraw to show dragging piece on top
+                    return;
+                }
+            }
+        }
+
+        /**
+         * Handles mouse move event on the canvas.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function handleMouseMove(event) {
+            if (!draggingPiece) return;
+
+            const rect = canvas.getBoundingClientRect();
+            // Scale mouse coordinates to match canvas resolution
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (event.clientX - rect.left) * scaleX;
+            const mouseY = (event.clientY - rect.top) * scaleY;
+
+            draggingPiece.x = mouseX - offsetX;
+            draggingPiece.y = mouseY - offsetY;
+
+            drawPuzzle();
+        }
+
+        /**
+         * Handles mouse up event on the canvas.
+         * @param {MouseEvent} event - The mouse event.
+         */
+        function handleMouseUp(event) {
+            if (!draggingPiece) return;
+
+            // Use the last known piece position if the event is not provided (for touchend fallback)
+            let finalX = draggingPiece.x;
+            let finalY = draggingPiece.y;
+
+            // If it's a mouse event, calculate the precise final position
+            if (event && event.clientX) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const mouseX = (event.clientX - rect.left) * scaleX;
+                const mouseY = (event.clientY - rect.top) * scaleY;
+                finalX = mouseX - offsetX;
+                finalY = mouseY - offsetY;
+            }
+
+            totalMoves++;
+            movesDisplay.textContent = totalMoves;
+
+            // Check if the piece is close enough to its original (solved) position
+            const targetX = draggingPiece.originalX;
+            const targetY = draggingPiece.originalY;
+
+            if (Math.abs(finalX - targetX) < SNAP_DISTANCE &&
+                Math.abs(finalY - targetY) < SNAP_DISTANCE) {
+                // Snap to position
+                draggingPiece.x = targetX;
+                draggingPiece.y = targetY;
+                draggingPiece.isSolved = true;
+            } else {
+                // If not solved, update to its final dragged position and mark as unsolved
+                draggingPiece.x = finalX;
+                draggingPiece.y = finalY;
+                draggingPiece.isSolved = false;
+            }
+
+            draggingPiece = null;
+            canvas.classList.remove('grabbing');
+            drawPuzzle();
+            checkWin();
+        }
+
+        /**
+         * Checks if the puzzle is solved.
+         */
+        function checkWin() {
+            const umbrellaPieces = pieces.filter(p => p.isUmbrellaPart);
+            const allUmbrellaPiecesSolved = umbrellaPieces.every(piece => piece.isSolved);
+
+            if (umbrellaPieces.length > 0 && allUmbrellaPiecesSolved) {
+                endGame("Puzzle Solved!", `You completed the puzzle in ${totalMoves} moves and ${gameTime} seconds!`);
+            }
+        }
+
+        /**
+         * Starts the game with a given grid size.
+         * @param {number} gridSize - The number of rows and columns for the puzzle.
+         */
+        function startGame(gridSize) {
+            currentGridSize = gridSize;
+            puzzleRows = gridSize;
+            puzzleCols = gridSize;
+
+            // Show only the active difficulty button and disable it
+            difficultyButtons.forEach(btn => {
+                btn.disabled = true;
+                if (parseInt(btn.dataset.size, 10) === gridSize) {
+                    btn.classList.add('active');
+                    btn.style.display = 'block';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
+
+            gameOver = false;
+            isSolutionVisible = false; // Reset solution state
+            solutionButton.textContent = "Show Solution"; // Reset button text
+            hideMessageBox(); // Hide any welcome/win messages
+            initializePuzzle(); // Setup new puzzle
+            difficultySelection.style.display = 'flex'; // Ensure it's always visible
+            startButton.style.display = 'none';
+            restartButton.style.display = 'block';
+            solutionButton.style.display = 'block';
+            startTimer(); // Start the game timer
+        }
+
+        /**
+         * Restarts the game by returning to the initial screen.
+         */
+        function restartGame() {
+            resetToInitialScreen();
+        }
+
+        /**
+         * Ends the game and shows a message.
+         * @param {string} title - The title of the game over message.
+         * @param {string} message - The content of the game over message.
+         */
+        function endGame(title, message) {
+            if (gameOver) return; // Already over
+            gameOver = true;
+            clearInterval(gameInterval); // Stop timer
+
+            // Re-enable and show all difficulty buttons
+            difficultyButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.display = 'block';
+            });
+
+            showMessageBox(title, message);
+            difficultySelection.style.display = 'flex';
+            startButton.style.display = 'block';
+            restartButton.style.display = 'none';
+            solutionButton.style.display = 'none';
+        }
+
+        /**
+         * Resets the entire game to the initial welcome screen.
+         */
+        function resetToInitialScreen() {
+            gameOver = true;
+            clearInterval(gameInterval);
+            totalMoves = 0;
+            gameTime = 0;
+            movesDisplay.textContent = totalMoves;
+            timeDisplay.textContent = gameTime;
+            pieces = []; // Clear out old pieces
+
+            // Enable and show all difficulty buttons, and set a default active one
+            difficultyButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.display = 'block';
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.size, 10) === selectedGridSize) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Clear canvas and draw solved image
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.drawImage(umbrellaCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Show/hide buttons
+            startButton.style.display = 'block';
+            restartButton.style.display = 'none';
+            solutionButton.style.display = 'none';
+            hideMessageBox();
+        }
+
+        // --- Message Box Functions ---
+
+        /**
+         * Displays a custom message box.
+         * @param {string} title - The title of the message.
+         * @param {string} text - The main text of the message.
+         */
+        function showMessageBox(title, text) {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            messageBox.style.display = 'block';
+        }
+
+        /**
+         * Hides the custom message box.
+         */
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
+
+        // --- Responsive Canvas Handling is now done with CSS ---
+
+        // Initial setup
+        window.onload = function() {
+            drawUmbrellaImage(); // Draw the source image once
+            selectedGridSize = 4; // Set a default
+            resetToInitialScreen();
+        };
+
+        // Event Listeners for puzzle interaction
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+            handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+            handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+        });
+        canvas.addEventListener('touchend', (e) => {
+            // For touchend, we can't reliably get the final coordinates from the event itself
+            // in a simple way, so we call handleMouseUp without an event.
+            // It will use the piece's last known position from the last 'touchmove'.
+            handleMouseUp(e);
+        });
+
+
+        // Event Listeners for buttons
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const size = parseInt(button.dataset.size, 10);
+                selectedGridSize = size;
+                // Highlight the active difficulty button
+                difficultyButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (parseInt(btn.dataset.size, 10) === size) {
+                        btn.classList.add('active');
+                    }
+                });
+            });
+        });
+        startButton.addEventListener('click', () => {
+            startGame(selectedGridSize);
+        });
+        restartButton.addEventListener('click', restartGame);
+        closeMessageButton.addEventListener('click', hideMessageBox);
+        solutionButton.addEventListener('click', () => {
+            isSolutionVisible = !isSolutionVisible; // Toggle the flag
+
+            if (isSolutionVisible) {
+                // Draw the completed umbrella image from the off-screen canvas
+                ctx.drawImage(umbrellaCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                solutionButton.textContent = "Hide Solution";
+            } else {
+                // Redraw the puzzle in its current state
+                drawPuzzle();
+                solutionButton.textContent = "Show Solution";
+            }
+        });
+    </script>
+</body>
+</html>
