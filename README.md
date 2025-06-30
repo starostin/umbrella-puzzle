@@ -1,1 +1,1 @@
-Umpbrella Puzzle game
+Umbrella Puzzle game
